@@ -31,7 +31,10 @@ class Movie:
 
         # styles
         self.movie_styles = ','.join(o.text for o in self.movie_soup.find_all("span", itemprop="genre"))
-        
+
+        # hack: remove duplicate / in url
+        self.url = self.url[:8] + self.url[8:].replace('//', '/')
+                
     def __str__(self) :
         return '"{}", {}, ({}) {}'.format(self.name, self.release_date, self.movie_styles, self.url)
 
