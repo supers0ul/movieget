@@ -26,8 +26,12 @@ class Movie:
         
         # release date
         span_date_published = self.movie_soup.find("span", itemprop="datePublished")
-        assert span_date_published
-        self.release_date = span_date_published.text 
+        #assert span_date_published
+        # TODO : clean that properly plz
+        if span_date_published is None :
+            self.release_date = 'FIXME'
+        else :
+            self.release_date = span_date_published.text 
 
         # styles
         self.movie_styles = ','.join(o.text for o in self.movie_soup.find_all("span", itemprop="genre"))
