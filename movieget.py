@@ -4,7 +4,7 @@ import argparse
 from datetime import datetime, timedelta
 import logging
 import csv
-
+import re
 
 ALLO_CINE_ROOT = 'https://www.allocine.fr'
 
@@ -22,16 +22,18 @@ class Movie:
         self.movie_soup = BeautifulSoup(html_text, 'html.parser')
     
         # retrieve name
-        self.name = self.movie_soup.find("meta", itemprop="name")['content']
+        self.name = self.movie_soup.find("meta", property="og:title")['content']
         
-        # release date
-        span_date_published = self.movie_soup.find("span", itemprop="datePublished")
-        #assert span_date_published
-        # TODO : clean that properly plz
-        if span_date_published is None :
-            self.release_date = 'FIXME'
+        # release date    
+        # TODO: find better parsing logic
+        to_parse = self.movie_soup.prettify()
+
+
+        r = re.findall(r'"releaseDate":"([^"]+)"', to_parse, flags = re.MULTILINE)
+        if r and len(r) >= 1 :
+            self.release_date = datetime.strptime(r[0].split('T')[0], '%Y-%m-%d').strftime('%d/%m/%Y')
         else :
-            self.release_date = span_date_published.text 
+            self.release_date = 'FIXME'
 
         # styles
         self.movie_styles = ','.join(o.text for o in self.movie_soup.find_all("span", itemprop="genre"))
@@ -61,7 +63,7 @@ class Movie:
 
         # TODO: ensure that link are in proper box to avoid getting invalid link
         for m in soup.find_all("a", "meta-title-link"):
-            movie_url = '{}/{}'.format(ALLO_CINE_ROOT, m['href'])
+            movie_url = '{}{}'.format(ALLO_CINE_ROOT, m['href'])
             movie = Movie(movie_url)
             print(movie)
             movie_list.append(movie)
