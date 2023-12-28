@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import logging
 import csv
 import re
+import json
 
 ALLO_CINE_ROOT = 'https://www.allocine.fr'
 
@@ -14,6 +15,8 @@ class Movie:
     def __init__(self, url):
         self.url = url
         self.sess = requests.session()
+        self.movie_styles = []
+        self.duration = 'unknown'
         self._parse()
 
     def _parse(self):
@@ -28,21 +31,40 @@ class Movie:
         # TODO: find better parsing logic
         to_parse = self.movie_soup.prettify()
 
+        # get json containing movies info
+        desc_script =self.movie_soup.find_all("script", {  "type" : "application/ld+json"}) #, itemtype=)
 
+        if len(desc_script) == 1 :
+            movie_inf = json.loads(desc_script[0].text)
+
+            # process movie duration
+            if 'duration' in movie_inf :
+                self.duration = movie_inf['duration'][2:]
+
+            # process movie style
+            if 'genre' in movie_inf :
+                style = movie_inf['genre']
+                
+                if isinstance(style, str) :
+                    style = [ style ]
+                self.movie_styles = style
+        
         r = re.findall(r'"releaseDate":"([^"]+)"', to_parse, flags = re.MULTILINE)
         if r and len(r) >= 1 :
             self.release_date = datetime.strptime(r[0].split('T')[0], '%Y-%m-%d').strftime('%d/%m/%Y')
         else :
             self.release_date = 'FIXME'
-
-        # styles
-        self.movie_styles = ','.join(o.text for o in self.movie_soup.find_all("span", itemprop="genre"))
-
+        
         # hack: remove duplicate / in url
         self.url = self.url[:8] + self.url[8:].replace('//', '/')
                 
     def __str__(self) :
-        return '"{}", {}, ({}) {}'.format(self.name, self.release_date, self.movie_styles, self.url)
+        return '"{}", {}, {}, "{}", {}'.format(
+            self.name, 
+            self.release_date, 
+            self.duration,
+            ' ; '.join(self.movie_styles), 
+            self.url)
 
 
     
